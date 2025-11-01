@@ -1,0 +1,95 @@
+import streamlit as st
+import folium
+import random
+from streamlit_folium import st_folium
+from folium import Icon
+
+# ---------------------- College Data ----------------------
+colleges = [
+    {"name": "Walchand Institute of Technology", "lat": 17.66884, "lon": 75.92293, "image": "https://i.imgur.com/wiF0DL6.jpeg", "website": "https://witsolapur.org/"},
+    {"name": "N. B. Navale Sinhgad College of Engineering", "lat": 17.72864, "lon": 75.85171, "image": "", "website": ""},
+    {"name": "A.G. Patil Institute of Technology", "lat": 17.61455, "lon": 75.91839, "image": "https://i.imgur.com/BV2xCZF.jpeg", "website": "http://www.agpit.edu.in/"},
+    {"name": "VVP Institute of Engineering and Technology", "lat": 17.66237, "lon": 75.91839, "image": "https://i.imgur.com/mz3ucUM.jpeg", "website": "https://vvpengineering.org/"},
+    {"name": "N.K. Orchid College of Engineering & Technology", "lat": 17.72018, "lon": 75.91949, "image": "https://i.imgur.com/LgZ1mcb.jpeg", "website": "https://www.orchidengg.ac.in/"},
+    {"name": "Bharatratna Indira Gandhi College of Engineering", "lat": 17.72318, "lon": 75.85525, "image": "https://i.imgur.com/uFBGg8o.jpeg", "website": "https://bigce.in/"},
+    {"name": "Siddheshwar Women's Engineering College", "lat": 17.68767, "lon": 75.91203, "image": "https://i.imgur.com/Fu7lASE.jpeg", "website": "https://sswcoe.edu.in/"},
+    {"name": "Bramhadeo Mane Institute of Technology", "lat": 17.66808, "lon": 75.80463, "image": "https://i.imgur.com/1NMnh7N.jpeg", "website": "https://bmitsolapur.org/"}
+]
+
+categories = {
+    "Police Station": {"icon": "shield-alt", "color": "black"},
+    "Hospital": {"icon": "plus-square", "color": "green"},
+    "Restaurant": {"icon": "cutlery", "color": "orange"},
+    "Café": {"icon": "coffee", "color": "brown"},
+    "Apartment": {"icon": "building", "color": "purple"}
+}
+crime_types = ['Theft', 'Assault', 'Burglary', 'Robbery', 'Vandalism']
+
+def generate_nearby_places(college, category, icon, count=2, offset=0.005):
+    return [
+        {
+            "name": f"{category} {i+1}",
+            "lat": college["lat"] + random.uniform(-offset, offset),
+            "lon": college["lon"] + random.uniform(-offset, offset),
+            "icon": icon
+        }
+        for i in range(count)
+    ]
+
+def generate_crime_data(college, count=7):
+    return [
+        {
+            "name": f"Crime: {random.choice(crime_types)}",
+            "lat": college["lat"] + random.uniform(-0.005, 0.005),
+            "lon": college["lon"] + random.uniform(-0.005, 0.005),
+            "icon": "exclamation-triangle"
+        }
+        for _ in range(count)
+    ]
+
+# ---------------------- Streamlit UI ----------------------
+st.set_page_config(layout="wide")
+st.title("🎓 Solapur College Info Map")
+
+college_names = [c["name"] for c in colleges]
+college_input = st.text_input("🔍 Type a College Name", "")
+
+if college_input:
+    selected_college = next((c for c in colleges if college_input.lower() in c["name"].lower()), None)
+
+    if selected_college:
+        m = folium.Map(location=[selected_college["lat"], selected_college["lon"]], zoom_start=15)
+
+        # Add College Marker
+        folium.Marker(
+            location=[selected_college["lat"], selected_college["lon"]],
+            popup=f"<b>{selected_college['name']}</b><br><a href='{selected_college['website']}' target='_blank'>Website</a>",
+            icon=folium.Icon(color="blue", icon="graduation-cap", prefix='fa')
+        ).add_to(m)
+
+        # Add Nearby Places
+        for category, config in categories.items():
+            places = generate_nearby_places(selected_college, category, config["icon"])
+            for place in places:
+                folium.Marker(
+                    location=[place["lat"], place["lon"]],
+                    popup=place["name"],
+                    icon=folium.Icon(color=config["color"], icon=place["icon"], prefix='fa')
+                ).add_to(m)
+
+        # Add Crime Data
+        crimes = generate_crime_data(selected_college)
+        for crime in crimes:
+            folium.Marker(
+                location=[crime["lat"], crime["lon"]],
+                popup=crime["name"],
+                icon=folium.Icon(color="red", icon=crime["icon"], prefix='fa')
+            ).add_to(m)
+
+        # Show Map
+        st_data = st_folium(m, width=1000, height=600)
+    else:
+        st.warning("No matching college found. Please try a valid name.")
+else:
+    st.info("Start typing a college name to view its map, nearby places, and crime data.")
+
